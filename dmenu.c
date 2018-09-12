@@ -13,6 +13,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
+#include <X11/Xresource.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif
@@ -60,6 +61,54 @@ static Clr *scheme[SchemeLast];
 
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
+
+/* Set font and colors from X resources database if they are not set
+ * from command line */
+static void
+readresources(void) {
+	XrmDatabase xdb;
+	char* xrm;
+	char* datatype[20];
+	XrmValue xvalue;
+
+	XrmInitialize();
+	xrm = XResourceManagerString(dpy);
+	if( xrm != NULL ) {
+		xdb = XrmGetStringDatabase(xrm);
+		if( fonts[0] == NULL && XrmGetResource(xdb, "dmenu.font", "*", datatype, &xvalue) == True )
+			fonts[0] = strdup(xvalue.addr);
+		if( colors[SchemeNorm][ColFg] == NULL && XrmGetResource(xdb, "dmenu.foreground", "*", datatype, &xvalue) == True )
+			colors[SchemeNorm][ColFg] = strdup(xvalue.addr);
+		if( colors[SchemeNorm][ColBg] == NULL && XrmGetResource(xdb, "dmenu.background", "*", datatype, &xvalue) == True )
+			colors[SchemeNorm][ColBg] = strdup(xvalue.addr);
+		if( colors[SchemeSel][ColFg] == NULL && XrmGetResource(xdb, "dmenu.selForeground", "*", datatype, &xvalue) == True )
+			colors[SchemeSel][ColFg] = strdup(xvalue.addr);
+		if( colors[SchemeSel][ColBg] == NULL && XrmGetResource(xdb, "dmenu.selBackground", "*", datatype, &xvalue) == True )
+			colors[SchemeSel][ColBg] = strdup(xvalue.addr);
+		if( colors[SchemeOut][ColFg] == NULL && XrmGetResource(xdb, "dmenu.outForeground", "*", datatype, &xvalue) == True )
+			colors[SchemeOut][ColFg] = strdup(xvalue.addr);
+		if( colors[SchemeOut][ColBg] == NULL && XrmGetResource(xdb, "dmenu.outBackground", "*", datatype, &xvalue) == True )
+			colors[SchemeOut][ColBg] = strdup(xvalue.addr);
+		if( lineheight == 0 && XrmGetResource(xdb, "dmenu.height", "*", datatype, &xvalue) == True )
+			lineheight = MAX(atoi(xvalue.addr),8);
+		XrmDestroyDatabase(xdb);
+	}
+	/* Set default colors if they are not set */
+    if( fonts[0] == NULL )
+        fonts[0] = "monospace:size=10";
+	if( colors[SchemeNorm][ColBg] == NULL )
+		colors[SchemeNorm][ColBg] = "#222222";
+	if( colors[SchemeNorm][ColFg] == NULL )
+		colors[SchemeNorm][ColFg] = "#bbbbbb";
+	if( colors[SchemeSel][ColBg] == NULL )
+		colors[SchemeSel][ColBg]  = "#005577";
+	if( colors[SchemeSel][ColFg] == NULL )
+		colors[SchemeSel][ColFg]  = "#eeeeee";
+	if( colors[SchemeOut][ColBg] == NULL )
+		colors[SchemeOut][ColBg] = "#00ffff";
+	if( colors[SchemeOut][ColFg] == NULL )
+		colors[SchemeOut][ColFg] = "#000000";
+}
 
 static void
 appenditem(struct item *item, struct item **list, struct item **last)
@@ -776,13 +825,14 @@ main(int argc, char *argv[])
 		fputs("warning: no locale modifiers support\n", stderr);
 	if (!(dpy = XOpenDisplay(NULL)))
 		die("cannot open display");
+	readresources();
 	screen = DefaultScreen(dpy);
 	root = RootWindow(dpy, screen);
 	if (!embed || !(parentwin = strtol(embed, NULL, 0)))
 		parentwin = root;
 	if (!XGetWindowAttributes(dpy, parentwin, &wa))
 		die("could not get embedding window attributes: 0x%lx",
-		    parentwin);
+			parentwin);
 	drw = drw_create(dpy, screen, root, wa.width, wa.height);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
