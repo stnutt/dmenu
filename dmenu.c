@@ -44,6 +44,7 @@ static int bh, mw, mh;
 static int inputw = 0, promptw;
 static int lrpad; /* sum of left and right padding */
 static size_t cursor;
+static int numitems = 0;
 static struct item *items = NULL;
 static struct item *matches, *matchend;
 static struct item *prev, *curr, *next, *sel;
@@ -184,6 +185,13 @@ drawmenu(void)
 	unsigned int curpos;
 	struct item *item;
 	int x = 0, y = 0, fh = drw->fonts->h, w;
+	XWindowChanges xwc;
+
+	xwc.height = (MIN(numitems, lines) + 1) * bh;
+	if (xwc.height != mh) {
+		XConfigureWindow(dpy, win, CWHeight, &xwc);
+		mh = xwc.height;
+	}
 
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
@@ -637,6 +645,7 @@ readstdin(void)
 		end = &item->next;
 		item->next = NULL;
 		item->out = 0;
+		numitems++;
 	}
 	match();
 	drawmenu();
