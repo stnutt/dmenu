@@ -90,7 +90,7 @@ readresources(void) {
 			colors[SchemeOut][ColFg] = strdup(xvalue.addr);
 		if( colors[SchemeOut][ColBg] == NULL && XrmGetResource(xdb, "dmenu.outBackground", "*", datatype, &xvalue) == True )
 			colors[SchemeOut][ColBg] = strdup(xvalue.addr);
-		if( lineheight == 0 && XrmGetResource(xdb, "dmenu.height", "*", datatype, &xvalue) == True )
+		if( lineheight == 0 && XrmGetResource(xdb, "dmenu.lineHeight", "*", datatype, &xvalue) == True )
 			lineheight = MAX(atoi(xvalue.addr),8);
 		XrmDestroyDatabase(xdb);
 	}
