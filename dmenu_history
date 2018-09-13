@@ -1,0 +1,21 @@
+#!/bin/sh
+
+if [[ $DMENU_HISTSIZE -eq 0 ]]; then
+    dmenu "$@"
+else
+    hist_file=${DMENU_HISTFILE:-${XDG_CACHE_DIR:-$HOME/.cache}/$(basename "$0")_history}
+
+    mkdir -p "$(dirname "$hist_file")"
+
+    if [[ -f $hist_file ]]; then
+        hist=$(tac "$hist_file" | awk -v n=$DMENU_HISTSIZE '!a[$0]++ && length(a) <= n')
+        tac <<< "$hist" > "$hist_file"
+    fi
+
+    (
+        if [[ -n $hist ]]; then
+            echo "$hist"
+        fi
+        grep -Fvx "$hist"
+    ) | dmenu "$@" | tee -a "$hist_file"
+fi
