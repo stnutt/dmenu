@@ -514,7 +514,18 @@ insert:
 			return;
 		/* fallthrough */
 	case XK_Up:
-		if (sel && sel->left && (sel = sel->left)->right == curr) {
+		if (sel && sel == matches) {
+			if (next) {
+				/* jump to end of list and position items in reverse */
+				curr = matchend;
+				calcoffsets();
+				curr = prev;
+				calcoffsets();
+				while (next && (curr = curr->right))
+					calcoffsets();
+			}
+			sel = matchend;
+		} else if (sel && sel->left && (sel = sel->left)->right == curr) {
 			curr = prev;
 			calcoffsets();
 		}
@@ -550,7 +561,10 @@ insert:
 			return;
 		/* fallthrough */
 	case XK_Down:
-		if (sel && sel->right && (sel = sel->right) == next) {
+		if (sel && sel == matchend) {
+			sel = curr = matches;
+			calcoffsets();
+		} else if (sel && sel->right && (sel = sel->right) == next) {
 			curr = next;
 			calcoffsets();
 		}
