@@ -63,6 +63,8 @@ static Clr *scheme[SchemeLast];
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
 
+static void setup();
+
 /* Set font and colors from X resources database if they are not set
  * from command line */
 static void
@@ -661,6 +663,10 @@ readstdin(void)
 		item->out = 0;
 		numitems++;
 	}
+    if (!win) {
+        grabkeyboard();
+        setup();
+    }
 	match();
 	drawmenu();
 }
@@ -866,8 +872,6 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif
 
-	grabkeyboard();
-	setup();
 	run();
 
 	return 1; /* unreachable */
