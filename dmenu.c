@@ -187,12 +187,19 @@ drawmenu(void)
 	unsigned int curpos;
 	struct item *item;
 	int x = 0, y = 0, fh = drw->fonts->h, w;
-	XWindowChanges xwc;
+	XWindowChanges wc;
+	XWindowAttributes wa;
 
-	xwc.height = (MIN(numitems, lines) + 1) * bh;
-	if (xwc.height != mh) {
-		XConfigureWindow(dpy, win, CWHeight, &xwc);
-		mh = xwc.height;
+	wc.height = (MIN(numitems, lines) + 1) * bh;
+	if (wc.height != mh) {
+		if (topbar) {
+			XConfigureWindow(dpy, win, CWHeight, &wc);
+		} else {
+			XGetWindowAttributes(dpy, win, &wa);
+			wc.y = wa.y + wa.height - wc.height;
+			XConfigureWindow(dpy, win, CWHeight|CWY, &wc);
+		}
+		mh = wc.height;
 	}
 
 	drw_setscheme(drw, scheme[SchemeNorm]);
