@@ -41,7 +41,7 @@ struct item {
 static char text[BUFSIZ] = "";
 static char *embed;
 static int bh, mw, mh;
-static int inputw = 0, promptw;
+static int inputw = 0, promptw, passwd = 0;
 static int lrpad; /* sum of left and right padding */
 static size_t cursor;
 static int numitems = 0;
@@ -187,6 +187,7 @@ drawmenu(void)
 	unsigned int curpos;
 	struct item *item;
 	int x = 0, y = 0, fh = drw->fonts->h, w;
+	char *censort;
 	XWindowChanges wc;
 	XWindowAttributes wa;
 
@@ -212,7 +213,13 @@ drawmenu(void)
 	/* draw input field */
 	w = (lines > 0 || !matches) ? mw - x : inputw;
 	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
+	if (passwd) {
+		censort = ecalloc(1, sizeof(text));
+		memset(censort, '.', strlen(text));
+		drw_text(drw, x, 0, w, bh, lrpad / 2, censort, 0);
+		free(censort);
+	} else
+		drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
 
 	curpos = TEXTW(text) - TEXTW(&text[cursor]);
 	if ((curpos += lrpad / 2 - 1) < w) {
@@ -670,10 +677,10 @@ readstdin(void)
 		item->out = 0;
 		numitems++;
 	}
-    if (!win) {
-        grabkeyboard();
-        setup();
-    }
+	if (!win) {
+		grabkeyboard();
+		setup();
+	}
 	match();
 	drawmenu();
 }
@@ -684,6 +691,13 @@ run(void)
 	fd_set fds;
 	int flags, xfd = XConnectionNumber(dpy);
 
+	if (passwd) {
+		inputw = lines = 0;
+		grabkeyboard();
+		setup();
+		drawmenu();
+	}
+
 	if ((flags = fcntl(0, F_GETFL)) == -1)
 		die("cannot get stdin control flags:");
 	if (fcntl(0, F_SETFL, flags | O_NONBLOCK) == -1)
@@ -691,7 +705,7 @@ run(void)
 	for (;;) {
 		FD_ZERO(&fds);
 		FD_SET(xfd, &fds);
-		if (!feof(stdin))
+		if (!passwd && !feof(stdin))
 			FD_SET(0, &fds);
 		if (select(xfd + 1, &fds, NULL, NULL, NULL) == -1)
 			die("cannot multiplex input:");
@@ -805,7 +819,7 @@ setup(void)
 static void
 usage(void)
 {
-	fputs("usage: dmenu [-biv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
+	fputs("usage: dmenu [-biPv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
 	      "             [-h height]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n", stderr);
 	exit(1);
@@ -827,7 +841,9 @@ main(int argc, char *argv[])
 		else if (!strcmp(argv[i], "-i")) { /* case-insensitive item matching */
 			fstrncmp = strncasecmp;
 			fstrstr = cistrstr;
-		} else if (i + 1 == argc)
+		} else if (!strcmp(argv[i], "-P"))   /* is the input a password */
+			passwd = 1;
+		else if (i + 1 == argc)
 			usage();
 		/* these options take one argument */
 		else if (!strcmp(argv[i], "-l"))   /* number of lines in vertical list */
